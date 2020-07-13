@@ -1,0 +1,100 @@
+---
+title: "REPRODUCIBLE RESEARCH COURSE PROJECT 1"
+author: "by RAKESH JOSE"
+date: "7/13/2020"
+output: html_document
+---
+
+# * REPRODUCIBLE RESEARCH COURSE PROJECT - 1 *
+
+activityData <- read.csv("./activity.csv")
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+
+
+summary(activityData)
+str(activityData)
+
+## NUMBER OF STEPS PER DAY
+StepsPerDay <- aggregate(activityData$steps, list(activityData$date), FUN=sum)
+colnames(StepsPerDay) <- c("Date", "Steps")
+StepsPerDay
+
+
+## HISTOGRAM OF TOTAL STEPS TAKEN EACH DAY
+
+a <- ggplot(StepsPerDay, aes(Steps))
+a+geom_histogram(boundary=0, binwidth=2000, col="darkred", fill="lightyellow")+ggtitle("Histogram of steps per day")+xlab("Steps")+ylab("Frequency")+theme(plot.title = element_text(face="bold", size=14))+scale_x_continuous(breaks=seq(0,26000,2000))+scale_y_continuous(breaks=seq(0,20,2))
+
+## MEAN AND MEDIAN OF THE TOTAL NUMBER OF STEPS TAKEN PER DAY
+
+mean(StepsPerDay$Steps, na.rm=TRUE)
+median(StepsPerDay$Steps, na.rm=TRUE)
+
+## AVERAGE DAILY ACTIVITY PATTERN
+
+STEPSPERTIME <- aggregate(steps~interval,data=activityData,FUN=mean,na.action=na.omit)
+STEPSPERTIME$time <- StepsPerTime$interval/100
+b <- ggplot(STEPSPERTIME, aes(time, steps))
+b+geom_line(col="red")+ggtitle("Average steps per time interval")+xlab("Time")+ylab("Steps")+theme(plot.title = element_text(face="bold", size=14))
+
+## 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps
+
+ST <- tibble::as_tibble(StepsPerTime)
+ST %>% select(time, steps) %>% filter(steps==max(ST$steps))
+
+# Imputing missing values
+
+
+
+### Calculate and report the total number of missing values in the dataset 
+
+MISS <- tibble::as_tibble(activityData)
+MISS %>% filter(is.na(steps)) %>% summarize(missing_values = n())
+
+### REPLACING MISSING VALUES
+
+activityData$CompleteSteps <- ifelse(is.na(activityData$steps), round(STEPSPERTIME$steps[match(activityData$interval, STEPSPERTIME$interval)],0), activityData$steps)
+
+### NEW DATA
+
+activityDataFull <- data.frame(steps=activityData$CompleteSteps, interval=activityData$interval, date=activityData$date)
+head(activityDataFull, n=10)
+
+
+### histogram of the total number of steps taken each day
+
+FullStepsPerDay <- aggregate(activityDataFull$steps, list(activityDataFull$date), FUN=sum)
+colnames(FullStepsPerDay) <- c("Date", "Steps")
+c <- ggplot(FullStepsPerDay, aes(Steps))
+c+geom_histogram(boundary=0, binwidth=2000, col="darkgreen", fill="lightgreen")+ggtitle("Histogram of steps per day")+xlab("Steps")+ylab("Frequency")+theme(plot.title = element_text(face="bold", size=14))+scale_x_continuous(breaks=seq(0,26000,2000))+scale_y_continuous(breaks=seq(0,26,2))
+
+
+### MAEN AND MEDIAN
+
+
+mean(FullStepsPerDay$Steps)
+
+median(FullStepsPerDay$Steps)
+
+## Are there differences in activity patterns between weekdays and weekends
+
+###Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+activityDataFull$RealDate <- as.Date(activityDataFull$date, format = "%Y-%m-%d")
+activityDataFull$weekday <- weekdays(activityDataFull$RealDate)
+activityDataFull$DayType <- ifelse(activityDataFull$weekday=='Saturday' | activityDataFull$weekday=='Sunday', 'weekend','weekday')
+head(activityDataFull, n=30)
+
+
+## Make a panel plot containing a time series plot (i.e. type = "l"\color{red}{\verb|type = "l"|}type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis)
+
+STEPSPERTIME1 <- aggregate(steps~interval+DayType,data=activityDataFull,FUN=mean,na.action=na.omit)
+STEPSPERTIME1$time <- StepsPerTime$interval/100
+d <- ggplot(STEPSPERTIME1, aes(time, steps))
+d+geom_line(col="darkgreen")+ggtitle("Average steps per time interval: weekdays vs. weekends")+xlab("Time")+ylab("Steps")+theme(plot.title = element_text(face="bold", size=14))+facet_grid(DayType ~ .)
+
+
+
